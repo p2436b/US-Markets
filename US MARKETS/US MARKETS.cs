@@ -23,18 +23,22 @@ public class USMARKETS : Indicator
     private readonly TextBlock tb1 = new();
     private readonly TextBlock tb2 = new();
     private readonly TextBlock tb3 = new();
-
-    [Output("Main")]
-    public IndicatorDataSeries Result { get; set; }
+    
+    [Parameter("Text Color", DefaultValue = "WhiteSmoke")]
+    public Color TextColor { get; set; }
+   
 
     protected override void Initialize()
     {
         tb1.Text = "Up Quotes: 0";
         tb1.Padding = "2.5";
+        tb1.ForegroundColor = TextColor;
         tb2.Text = "Down Quotes: 0";
         tb2.Padding = "2.5";
+        tb2.ForegroundColor = TextColor;
         tb3.Text = "Unchanged Quotes: 0";
         tb3.Padding = "2.5";
+        tb3.ForegroundColor = TextColor;
 
         var stack = new StackPanel
         {
@@ -61,7 +65,7 @@ public class USMARKETS : Indicator
     {
         try
         {
-            var response = await _httpClient.GetAsync(string.Format("{0}?symbols={1}", BaseUrl, HttpUtility.UrlEncode(DOW30Symbols)));
+            var response = await _httpClient.GetAsync($"{BaseUrl}?symbols={HttpUtility.UrlEncode(DOW30Symbols)}");
             if (response.IsSuccessStatusCode)
             {
                 var upCounter = 0;
@@ -72,7 +76,7 @@ public class USMARKETS : Indicator
                 var quotes = await JsonSerializer.DeserializeAsync<Result>(stream, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
                 quotes.FormattedQuoteResult.FormattedQuote.ForEach(quote =>
                 {
-                    if (quote.Change.Contains("+"))
+                    if (quote.Change.StartsWith("+"))
                     {
                         upCounter++;
                     }
@@ -87,9 +91,9 @@ public class USMARKETS : Indicator
                 });
                 BeginInvokeOnMainThread(() =>
                 {
-                    tb1.Text = "Up Quotes: " + upCounter;
-                    tb2.Text = "Down Quotes: " + downCounter;
-                    tb3.Text = "Unchanged Quotes: " + unchangedCounter;
+                    tb1.Text = $"Up Quotes: {upCounter}";
+                    tb2.Text = $"Down Quotes: {downCounter}";
+                    tb3.Text = $"Unchanged Quotes: {unchangedCounter}";
                 });
 
             }
