@@ -15,7 +15,7 @@ namespace cAlgo;
 [Indicator(IsOverlay = true, AccessRights = AccessRights.FullAccess)]
 public class USMARKETS : Indicator
 {
-    private static readonly HttpClient _httpClient = new();
+    private HttpClient _httpClient;
     private const string BaseUrl = "https://quote.cnbc.com/quote-html-webservice/restQuote/symbolType/symbol";
     private const string DOW30Symbols = "AXP|AMGN|AAPL|BA|CAT|CSCO|CVX|GS|HD|HON|IBM|INTC|JNJ|KO|JPM|MCD|MMM|MRK|MSFT|NKE|PG|TRV|UNH|CRM|VZ|V|WBA|WMT|DIS|DOW";
     //private const string NASDAQ100Symbols = "CMCSA|COST|CSX|CTSH|DDOG|DXCM|FANG|DLTR|EA|EBAY|ENPH|ON|EXC|FAST|GFS|META|FI|FTNT|GILD|GOOG|GOOGL|HON|ILMN|INTC|INTU|ISRG|MRVL|IDXX|JD|KDP";
@@ -23,11 +23,18 @@ public class USMARKETS : Indicator
     private readonly TextBlock tb1 = new();
     private readonly TextBlock tb2 = new();
     private readonly TextBlock tb3 = new();
-    
+
     [Parameter("Text Color", DefaultValue = "WhiteSmoke")]
     public Color TextColor { get; set; }
-   
 
+    [Parameter("Refresh (Second)", DefaultValue = 5)]
+    public double RefreshRate { get; set; }
+
+    protected override void OnDestroy()
+    {
+        _httpClient.Dispose();
+    }
+    
     protected override void Initialize()
     {
         tb1.Text = "Up Quotes: 0";
@@ -57,14 +64,15 @@ public class USMARKETS : Indicator
         };
 
         Chart.AddControl(panel);
+        _httpClient=new();
         OnTimer();
-        Timer.Start(10);
+        Timer.Start(TimeSpan.FromSeconds(RefreshRate));
     }
 
     protected async override void OnTimer()
     {
         try
-        {
+        {        
             var response = await _httpClient.GetAsync($"{BaseUrl}?symbols={HttpUtility.UrlEncode(DOW30Symbols)}");
             if (response.IsSuccessStatusCode)
             {
@@ -96,6 +104,10 @@ public class USMARKETS : Indicator
                     tb3.Text = $"Unchanged Quotes: {unchangedCounter}";
                 });
 
+            }
+            else
+            {
+                Print(response.ReasonPhrase);
             }
         }
         catch (Exception ex)
